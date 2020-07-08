@@ -8,7 +8,7 @@ import requests as rqs
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import json
-from random import randint
+from random import randint, shuffle
 import logging
 
 def start(update, context):
@@ -18,20 +18,36 @@ def echo(update, context):
     # search link based on input text
     with open('googling.json') as f:
         apis = json.load(f)
-    search_link = "https://customsearch.googleapis.com/customsearch/v1?cx={0}&imgSize=LARGE&num=10&q={1}&searchType=image&start={3}&key={2}".format(apis['cx'], update.message.text, apis['key'], randint(0, 5)*10 + 1)
 
-    # search for images
-    res = rqs.get(search_link)
-    print(res.status_code)
+    page = [j for j in range(10)]
+    shuffle(page)
+    for i in page:
+        try:
+            # link
+            search_link = "https://customsearch.googleapis.com/customsearch/v1?cx={0}&imgSize=LARGE&num=10&q={1}&searchType=image&start={3}&key={2}".format(apis['cx'], update.message.text, apis['key'], i*10 + 1)
 
-    # get photos urls from response json
-    photos = []
-    search_photos = json.loads(res.text)
-    for photo in search_photos["items"]:
-        photos.append(telegram.InputMediaPhoto(media=photo["link"]))
+            # get images
+            res = rqs.get(search_link)
+            if res.status_code != 200:
+                raise
 
-    # send album of photos
-    context.bot.send_media_group(chat_id=update.effective_chat.id, media=photos)
+            # get photos urls from response json
+            photos = []
+            search_photos = json.loads(res.text)
+            for photo in search_photos["items"]:
+                photos.append(telegram.InputMediaPhoto(media=photo["link"]))
+
+            # send album of photos
+            context.bot.send_media_group(chat_id=update.effective_chat.id, media=photos)
+        except telegram.TelegramError:
+            logging.info("Problem with media group sending.")
+            continue
+        except:
+            continue
+        finally:
+            break
+    else:
+        context.bot.send_message(chat_id=update.effective_chat.id, text='Seems to be nothing?')
 
 def main():
     # get tocken
