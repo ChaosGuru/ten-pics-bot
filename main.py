@@ -39,12 +39,9 @@ def echo(update, context):
 
             # send album of photos
             context.bot.send_media_group(chat_id=update.effective_chat.id, media=photos)
-        except telegram.TelegramError:
-            logging.info("Problem with media group sending.")
-            continue
-        except:
-            continue
-        finally:
+        except telegram.TelegramError as e:
+            logging.info("Problem with telegram: %s" % e)
+        else:
             break
     else:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Seems to be nothing?')
